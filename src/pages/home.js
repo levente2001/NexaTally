@@ -321,101 +321,47 @@ onCloseMmodallll = ()=>{
 
 componentDidMount() {
   initialize();
-  console.log("lefut a componentdidmount");
-  Firebase.auth().onAuthStateChanged((user) => {
-    this.setState({
-      dolgozo: user.email,
-      userId: user.uid
-    });
-    /*if (user.email === 'kalolevente@gmail.com' || user.email === 'lalivaroskut@gmail.com') {
-      this.setState({ isVisible: true });
-    } else {
-      this.setState({ isVisible: false });
-    }*/
-    const categoriesRef = Firebase.database().ref(`categories/${user.uid}`);
-    categoriesRef.on('value', (snapshot) => {
-    const categoryList = snapshot.val() || {};
-    const categories = Object.values(categoryList);
-    this.setState({ customCategories: categories });
-    const itemsRef = Firebase.database().ref(`items/${this.state.userId}`);
-  const itemsRefT = Firebase.database().ref(`sale/${this.state.userId}`);
-  const itemsRefR = Firebase.database().ref(`rev/${this.state.userId}`);
-  const itemsRefP = Firebase.database().ref(`tetelek/${this.state.userId}`);
-  itemsRefR.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let ossz = [];
-      for (let item in items) {
-        ossz.push({
-          ossz: items[item].vegosszeg
-        });
-      }
-    
-    this.setState({bevtl: ossz});
+  this.dbListeners = [];
+  this.unsubscribeAuth = Firebase.auth().onAuthStateChanged(user => {
+    for (const [ref, callback] of this.dbListeners) ref.off("value", callback);
+    this.dbListeners = [];
+    if (!user) return;
+    const uid = user.uid;
+    this.setState({ dolgozo: user.email || "", userId: uid });
+    const observe = (path, onValue) => {
+      const ref = Firebase.database().ref(path + "/" + uid);
+      const callback = snapshot => onValue(snapshot.val() || {});
+      ref.on("value", callback);
+      this.dbListeners.push([ref, callback]);
+    };
+    observe("categories", entries => this.setState({ customCategories: Object.values(entries) }));
+    observe("items", entries => this.setState({
+      items: Object.entries(entries).map(([id, value]) => ({ id, user: value.user }))
+    }));
+    observe("sale", entries => this.setState({
+      termekek: Object.entries(entries).map(([id, value]) => ({
+        id, cat: value.cat, ar: value.ar, nev: value.nev,
+        ingredients: Object.entries(value.ingredients || {}).map(([name, quantity]) => ({ name, quantity }))
+      }))
+    }));
+    observe("rev", entries => this.setState({
+      bevtl: Object.values(entries).map(value => ({ ossz: Number(value.vegosszeg) || 0 }))
+    }));
+    observe("tetelek", entries => this.setState({
+      lista: Object.entries(entries).map(([id, value]) => ({
+        id, ar: value.ar, tetel: value.tetel, vendeg: value.vendeg,
+        szamlalo: value.szamlalo
+      }))
+    }));
   });
-  itemsRef.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      newState.push({
-        id: item,
-        user: items[item].user
-      });
-    }
-    this.setState({
-      items: newState
-    });
-  });
-  itemsRefT.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      let currentItem = items[item];
-      newState.push({
-        id: item,
-        cat: items[item].cat,
-        ar: items[item].ar,
-        nev: items[item].nev,
-        ingredients: currentItem.ingredients ? Object.entries(currentItem.ingredients).map(([ingName, quantity]) => ({
-          name: ingName,
-          quantity: quantity
-      })) : []
-      });
-    }
-    this.setState({
-      termekek: newState
-    });
-  });
-
-  itemsRefP.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      newState.push({
-        id: item,
-        ar: items[item].ar,
-        tetel: items[item].tetel,
-        vendeg: items[item].vendeg,
-        szamlalo: items[item].szamlalo,
-      });
-      this.setState({
-        lista: newState
-      });
-    }
-  });
-  });
-  });
-  
-
-  this.timer = setInterval(() => {
-    this.setState({ currentDate: new Date() });
-  }, 1000);
+  this.timer = setInterval(() => this.setState({ currentDate: new Date() }), 1000);
 }
 
 componentWillUnmount() {
-  // Időzítő törlése, amikor a komponens eltávolításra kerül
   clearInterval(this.timer);
+  if (this.unsubscribeAuth) this.unsubscribeAuth();
+  for (const [ref, callback] of (this.dbListeners || [])) ref.off("value", callback);
 }
-
 
   render() {
     if (this.props.authState === authStates.INITIAL_VALUE) {
