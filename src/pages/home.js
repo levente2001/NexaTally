@@ -390,7 +390,9 @@ componentWillUnmount() {
         revenue={resultt}
         selectGuest={guest => this.setState({ cimnev: guest.user, id: guest.id })}
         createGuest={name => {
-          Firebase.database().ref("items/" + this.state.userId).push({ user: name });
+          const guestRef = Firebase.database().ref("items/" + this.state.userId).push();
+          guestRef.set({ user: name });
+          this.setState({ cimnev: name, id: guestRef.key });
         }}
         addProduct={product => this.setState({ szamlalo: 1, ar: product.ar, tetel: product.nev }, () => this.handleSubmitTerm())}
         onIncrement={this.incrementSzamlalo}
