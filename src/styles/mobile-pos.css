@@ -1,0 +1,107 @@
+/* Mobile-only NexaTally POS. Desktop/tablet styles are intentionally untouched. */
+.nexa-mobile { display: none; }
+.nexa-desktop { display: block; }
+@media (max-width: 767px) {
+  .nexa-desktop { display: none !important; }
+  .nexa-mobile {
+    display: block;
+    min-height: 100dvh;
+    color: #17231c;
+    background: #fafbf9;
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: left;
+    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+  .nexa-mobile *, .nexa-mobile *::before, .nexa-mobile *::after { box-sizing: border-box; }
+  .nexa-mobile button, .nexa-mobile input, .nexa-mobile select { font: inherit; }
+  .nexa-mobile button { width: auto; height: auto; margin: 0; line-height: 1.3; cursor: pointer; }
+  .nexa-mobile-header { height: 76px; padding: 18px 18px 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid #edf0ed; }
+  .nexa-mobile-brand { font-size: 26px; font-weight: 850; letter-spacing: -.9px; white-space: nowrap; }
+  .nexa-mobile-brand span { color: #168c38; }
+  .nexa-mobile-header-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .nexa-role { display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; background: #ffdf87; color: #3b311b; border-radius: 12px; padding: 9px 10px; font-size: 12px; font-weight: 700; }
+  .nexa-mobile .nexa-logout { background: #ff6960; color: white; font-size: 22px; border: 0; border-radius: 11px; width: 40px; height: 40px; padding: 0; }
+  .nexa-mobile-main { padding: 22px 16px 18px; max-width: 620px; margin: auto; }
+  .nexa-mobile-title-row { display: flex; gap: 12px; align-items: center; margin-bottom: 19px; }
+  .nexa-mobile h1 { font: 800 27px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -.4px; color: #17231c; margin: 0; }
+  .nexa-mobile .nexa-back { background: white; border: 1px solid #d9ded9; border-radius: 12px; width: 39px; height: 39px; font-size: 34px; padding: 0 0 5px; color: #17231c; }
+  .nexa-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 21px; }
+  .nexa-stat { min-height: 86px; padding: 13px 14px; border-radius: 16px; display: flex; flex-direction: column; justify-content: center; }
+  .nexa-stat small { font-size: 12px; font-weight: 650; margin-bottom: 6px; }
+  .nexa-stat strong { font-size: 23px; font-weight: 800; letter-spacing: -.5px; }
+  .nexa-stat-green { background: #e2f7dc; color: #087d2d; }
+  .nexa-stat-blue { background: #e3efff; color: #25548f; }
+  .nexa-segments { display: flex; margin-bottom: 16px; padding: 3px; background: #f0f2f0; border-radius: 13px; gap: 4px; }
+  .nexa-mobile .nexa-segments button { flex: 1; padding: 11px 12px; border: 0; background: transparent; color: #536159; font-weight: 650; border-radius: 10px; }
+  .nexa-mobile .nexa-segments button.active { color: white; background: #178a38; box-shadow: 0 2px 5px #0001; }
+  .nexa-search { display: flex; align-items: center; height: 49px; gap: 9px; padding: 0 12px; border: 1px solid #d9dfd9; background: #fff; border-radius: 13px; margin-bottom: 17px; }
+  .nexa-search span { font-size: 26px; color: #7a857e; }
+  .nexa-mobile .nexa-search input { width: 100%; flex: 1; height: 100%; outline: none; border: 0; border-radius: 0; background: transparent; padding: 0; margin: 0; min-width: 0; font-size: 15px; color: #17231c; }
+  .nexa-orders { display: flex; flex-direction: column; gap: 10px; }
+  .nexa-mobile .nexa-order-card { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; color: #17231c; border: 1px solid #dce4dc; border-radius: 16px; box-shadow: 0 2px 7px #1829190a; padding: 16px 13px; min-height: 98px; }
+  .nexa-order-icon { width: 42px; height: 42px; flex: 0 0 42px; display: flex; align-items: center; justify-content: center; background: #e7f8e6; color: #148735; font-size: 25px; border-radius: 12px; }
+  .nexa-order-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .nexa-order-content strong { font-size: 17px; overflow-wrap: anywhere; }
+  .nexa-order-content span { font-size: 13px; color: #69736e; }
+  .nexa-order-right { display: flex; flex-direction: column; gap: 7px; align-items: flex-end; white-space: nowrap; }
+  .nexa-order-right strong { color: #138332; font-size: 17px; }
+  .nexa-pill { font-size: 11px; background: #e0efff; border-radius: 12px; padding: 4px 9px; color: #275b94; font-weight: 700; }
+  .nexa-chevron { font-size: 27px; color: #7a837d; }
+  .nexa-add-guest { display: flex; gap: 8px; margin: 20px 0 60px; }
+  .nexa-mobile .nexa-add-guest input { flex: 1; min-width: 0; border: 1px solid #d9dfd9; height: 49px; border-radius: 12px; margin: 0; padding: 0 12px; color: #17231c; background: #fff; }
+  .nexa-mobile .nexa-add-guest button { width: 50px; height: 49px; border-radius: 12px; background: #118a32; color: white; border: 0; font-size: 27px; padding: 0; }
+  .nexa-mobile .nexa-fab { position: fixed; right: 22px; bottom: calc(103px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; padding: 0; border: 0; border-radius: 50%; background: #2c5795; box-shadow: 0 7px 19px #17346036; color: white; font-size: 35px; z-index: 2; }
+  .nexa-empty { text-align: center; color: #6b776e; margin: 30px 0; font-size: 14px; }
+  .nexa-mobile .nexa-bottom-nav { position: fixed; z-index: 5; bottom: 0; left: 0; right: 0; height: calc(78px + env(safe-area-inset-bottom, 0px)); padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e6ece6; display: flex; align-items: stretch; justify-content: space-around; gap: 6px; box-shadow: 0 -5px 20px #11111108; }
+  .nexa-mobile .nexa-bottom-nav button, .nexa-mobile .nexa-bottom-nav a { flex: 1; padding: 6px 2px; min-width: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; border: none; border-radius: 14px; background: transparent; color: #465148; text-decoration: none; font-size: 11px; font-weight: 700; text-align: center; }
+  .nexa-mobile .nexa-bottom-nav .active { color: #147c32; background: #e0f6df; }
+  .nexa-mobile .nexa-bottom-nav span { font-size: 25px; line-height: 1.15; }
+  .nexa-summary { display: flex; flex-direction: column; gap: 4px; background: #e4f7e1; color: #136f2b; border-radius: 16px; padding: 18px 20px; margin: 0 0 20px; }
+  .nexa-summary strong { font-size: 30px; }
+  .nexa-lines { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 24px; }
+  .nexa-line { display: flex; align-items: center; gap: 9px; padding: 12px 11px; border: 1px solid #dbe3db; background: white; border-radius: 15px; }
+  .nexa-line-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+  .nexa-line-copy strong { font-size: 14px; }
+  .nexa-line-copy span { color: #69736e; font-size: 12px; }
+  .nexa-quantity { display: flex; align-items: center; gap: 6px; }
+  .nexa-quantity strong { min-width: 16px; text-align: center; }
+  .nexa-mobile .nexa-quantity button { width: 35px; height: 36px; color: #20528f; font-size: 23px; border: 1px solid #b6d3ef; border-radius: 9px; background: #e8f2ff; padding: 0; }
+  .nexa-mobile .nexa-remove { border: 0; background: transparent; color: #d04f4b; font-size: 23px; padding: 4px; }
+  .nexa-mobile .nexa-primary, .nexa-mobile .nexa-pay { display: block; width: 100%; margin: 12px 0; padding: 16px 10px; border: none; border-radius: 13px; background: #168932; color: white; font-size: 16px; font-weight: 800; }
+  .nexa-mobile .nexa-pay { background: #80b549; font-size: 18px; }
+  .nexa-mobile .nexa-pay:disabled { opacity: .4; cursor: not-allowed; }
+  .nexa-guest-selector { background: #fff; border: 1px solid #d7ded7; border-radius: 14px; padding: 10px 12px; margin-bottom: 14px; }
+  .nexa-guest-selector label { font-size: 12px; display: block; color: #67736b; }
+  .nexa-mobile .nexa-guest-selector select { display: block; width: 100%; height: 34px; border: none; padding: 0; background: #fff; color: #17231c; font-size: 17px; font-weight: 700; }
+  .nexa-categories { display: flex; overflow-x: auto; gap: 8px; margin-bottom: 18px; scrollbar-width: none; padding-bottom: 3px; }
+  .nexa-categories::-webkit-scrollbar { display: none; }
+  .nexa-mobile .nexa-categories button { flex: 0 0 auto; border: 1px solid #d2dad2; color: #233128; background: white; border-radius: 25px; padding: 10px 15px; font-weight: 700; white-space: nowrap; }
+  .nexa-mobile .nexa-categories button.active { background: #138b34; border-color: #138b34; color: #fff; }
+  .nexa-products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .nexa-mobile .nexa-product { min-width: 0; min-height: 128px; width: 100%; padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: white; color: #17231c; border: 1px solid #d9e0d9; border-radius: 14px; }
+  .nexa-mobile .nexa-product:active { background: #e7f8e5; border-color: #138b34; }
+  .nexa-product-symbol { font-size: 29px; color: #448c53; }
+  .nexa-product strong { font-size: 14px; overflow-wrap: anywhere; }
+  .nexa-product span:last-child { color: #147c32; font-size: 15px; font-weight: 800; }
+  .nexa-cart { position: sticky; bottom: calc(77px + env(safe-area-inset-bottom, 0px)); background: #fff; box-shadow: 0 -5px 20px #11111112; border: 1px solid #edf0ed; border-radius: 19px; padding: 15px 14px 10px; margin: 24px -6px 0; }
+  .nexa-cart-heading, .nexa-cart-line { display: flex; justify-content: space-between; gap: 8px; }
+  .nexa-cart-heading { font-size: 16px; margin-bottom: 10px; }
+  .nexa-cart-line { font-size: 13px; border-top: 1px solid #eef1ee; padding: 7px 0; }
+  .nexa-cart .nexa-primary { margin: 12px 0 0; }
+  .nexa-notice { position: fixed; left: 16px; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 4; background: #254f31; color: #fff; border-radius: 12px; padding: 12px; text-align: center; font-weight: 700; box-shadow: 0 5px 14px #0003; }
+  .nexa-stock-alert { margin-bottom: 15px; padding: 13px; border: 1px solid #df7772; border-radius: 13px; background: #fff0ef; color: #a72c25; font-size: 14px; font-weight: 750; }
+  .nexa-stock-list { display: flex; flex-direction: column; gap: 11px; }
+  .nexa-stock-row { display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid #dce3dc; border-radius: 15px; padding: 12px; }
+  .nexa-stock-row.low { background: #fff8e9; border-color: #e9bf66; }
+  .nexa-stock-row-copy { flex: 1; min-width: 0; }
+  .nexa-stock-row-copy strong { display: block; overflow-wrap: anywhere; }
+  .nexa-stock-row-copy small { color: #607066; font-size: 13px; }
+  .nexa-stock-row.low .nexa-stock-row-copy small { color: #b57916; }
+  .nexa-mobile .nexa-stock-row button { flex: 0 0 auto; min-width: 39px; height: 42px; border-radius: 10px; border: 1px solid #acc8e7; color: #24558d; background: #eaf2ff; font-size: 24px; padding: 0 8px; }
+  .nexa-mobile .nexa-stock-row .nexa-stock-edit { border-color: #ddd; background: white; font-size: 12px; color: #526159; }
+  .nexa-mobile .nexa-stock-add { background: #178b37; border: 0; border-radius: 13px; padding: 12px 16px; color: white; font-weight: 800; }
+  .nexa-stock-tools { display: flex; gap: 8px; justify-content: space-between; margin: 10px 0 18px; }
+  .nexa-stock-tools .nexa-search { flex: 1; min-width: 0; margin: 0; }
+  .nexa-mobile .nexa-stock-add { white-space: nowrap; }
+}
