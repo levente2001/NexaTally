@@ -144,9 +144,14 @@ class Home extends React.Component {
       snapshot.forEach(child => {
         if (child.val().vendeg === cimnev) updates[child.key] = null;
       });
-      // Record the payment before removing open items; do not create a permanent listener.
-      await Firebase.database().ref("rev/" + userId).push({ vegosszeg: total });
-      await Promise.all([orderRef.remove(), linesRef.update(updates)]);
+      // One atomic multi-location write prevents recording revenue without closing the order.
+      const revenueKey = Firebase.database().ref("rev/" + userId).push().key;
+      const atomicUpdates = {
+        ["rev/" + userId + "/" + revenueKey]: { vegosszeg: total },
+        ["items/" + userId + "/" + id]: null
+      };
+      Object.keys(updates).forEach(key => { atomicUpdates["tetelek/" + userId + "/" + key] = null; });
+      await Firebase.database().ref().update(atomicUpdates);
       this.setState({ cimnev: "", id: "", openModalllll: false });
     } catch (error) {
       console.error("Fizetés sikertelen:", error);
