@@ -9,7 +9,7 @@ import 'react-responsive-modal/styles.css';
 import "../styles/admin.css";
 
 
-class Raktarkeszlet extends React.Component {
+class Termekek extends React.Component {
     constructor(props){
         super(props);
         this.state = {
@@ -24,7 +24,9 @@ class Raktarkeszlet extends React.Component {
           ingredientss: [{ name: '', quantity: '' }],
           price: '',
           ingredientOptions: [],
-          ingreDients: [{ name: '', quantity: '' }]
+          ingreDients: [{ name: '', quantity: '' }],
+          customCategories: [], 
+          newCategoryName: '',
         };
         this.handleAddIngredient = this.handleAddIngredient.bind(this);
         this.handleAddIngredientt = this.handleAddIngredientt.bind(this);
@@ -72,29 +74,81 @@ class Raktarkeszlet extends React.Component {
 
     handleSubmit(e) {
         e.preventDefault();
-        const ingredientData = this.state.ingredients.reduce((acc, ing) => {
-            acc[ing.name] = parseFloat(ing.quantity);
-            return acc;
+        
+        const { ingredients, userId } = this.state;
+        const ingredientData = ingredients.reduce((acc, ing) => {
+          acc[ing.name] = parseFloat(ing.quantity);
+          return acc;
         }, {});
-
-        const productRef = Firebase.database().ref('sale').push();
-
-        productRef.set({
+      
+        const warehouseRef = Firebase.database().ref(`warehouse/${userId}`);
+        
+        warehouseRef.once('value').then(snapshot => {
+          const warehouseData = snapshot.val() || {};
+      
+          // Minden hozzávalót ellenőrzünk
+          const missing = [];
+      
+          Object.entries(ingredientData).forEach(([name, requiredQuantity]) => {
+            let found = false;
+      
+            // Végignézzük az összes raktári elem nevét
+            for (const key in warehouseData) {
+              const item = warehouseData[key];
+      
+              if (item.name === name) {
+                const currentQuantity = parseFloat(item.quantity);
+                if (currentQuantity < requiredQuantity) {
+                  missing.push(`${name} - csak ${currentQuantity} van, de ${requiredQuantity} kell`);
+                }
+                found = true;
+                break;
+              }
+            }
+      
+            if (!found) {
+              missing.push(`${name} nem található a raktárban`);
+            }
+          });
+      
+          if (missing.length > 0) {
+            alert("Nem sikerült hozzáadni a terméket:\n" + missing.join('\n'));
+            return;
+          }
+      
+          // Ha minden hozzávaló rendelkezésre áll → termék mentése
+          const productRef = Firebase.database().ref(`sale/${userId}`).push();
+          productRef.set({
             nev: this.state.productName,
             ingredients: ingredientData,
             cat: this.state.selectedCategory,
             ar: this.state.price,
-        });
-
-        // Reset the form
-        this.setState({
+          });
+      
+          // Készlet frissítése (levonás)
+          /*Object.entries(ingredientData).forEach(([name, quantityUsed]) => {
+            for (const key in warehouseData) {
+              const item = warehouseData[key];
+              if (item.name === name) {
+                const newQuantity = parseFloat(item.quantity) - parseFloat(quantityUsed);
+                Firebase.database().ref(`warehouse/${userId}/${key}`).update({ quantity: newQuantity });
+                break;
+              }
+            }
+          });*/
+      
+          // Reset
+          this.setState({
             productName: '',
             ingredients: [{ name: '', quantity: '' }],
             price: '',
             selectedCategory: '',
+          });
+          this.onCloseModall();
+      
         });
-        this.onCloseModall();
-    }
+      }
+      
 
 
 
@@ -123,44 +177,65 @@ onClickButtonn = e =>{
      this.setState({selectedItem: ''})
    }
 
-componentDidMount() {
+   componentDidMount() {
     initialize();
-
-    const itemsRef = Firebase.database().ref('sale');
-
-    itemsRef.on('value', (snapshot) => {
-        let items = snapshot.val();
-        let newState = [];
-        for (let item in items) {
-          newState.push({
-            id: item,
-            nev: items[item].nev,
-            ar: items[item].ar,
-            ingredients: Object.entries(items[item].ingredients || {}).map(([name, quantity]) => ({
-                name,
-                quantity
-              })),
-          });
-        }
-        console.log(newState);
-        this.setState({
-          lista: newState
+  
+    Firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        const userId = user.uid;
+        this.setState({ userId });
+  
+        // Termékek lekérdezése
+        const itemsRef = Firebase.database().ref(`sale/${userId}`);
+        itemsRef.on('value', (snapshot) => {
+          const items = snapshot.val() || {};
+          const newState = Object.keys(items).map((key) => ({
+            id: key,
+            nev: items[key].nev,
+            ar: items[key].ar,
+            ingredients: Object.entries(items[key].ingredients || {}).map(([name, quantity]) => ({
+              name,
+              quantity
+            })),
+          }));
+          this.setState({ lista: newState });
         });
-      });
 
-    const warehouseRef = Firebase.database().ref('warehouse');
-    
-    warehouseRef.on('value', snapshot => {
-        const warehouseData = snapshot.val();
-        const ingredientNames = [];
-        
-        for (let ingredient in warehouseData) {
-            ingredientNames.push(warehouseData[ingredient].name);
-        }
-        
-        this.setState({ ingredientOptions: ingredientNames });
+        const categoriesRef = Firebase.database().ref(`categories/${userId}`);
+        categoriesRef.on('value', (snapshot) => {
+        const categoryList = snapshot.val() || {};
+        const categories = Object.values(categoryList);
+        this.setState({ customCategories: categories });
+        });
+
+  
+        // Hozzávalók lekérdezése (warehouse)
+        const warehouseRef = Firebase.database().ref(`warehouse/${userId}`);
+        warehouseRef.on('value', (snapshot) => {
+          const warehouseData = snapshot.val() || {};
+          const ingredientNames = [];
+  
+          Object.values(warehouseData).forEach((item) => {
+            // ha a value is egy objektum (mint pl. "teszt alapanyag 2": {...}), akkor végigmegyünk benne is
+            if (typeof item === 'object' && !item.name) {
+              Object.values(item).forEach((subItem) => {
+                if (subItem?.name) {
+                  ingredientNames.push(subItem.name);
+                }
+              });
+            } else if (item?.name) {
+              ingredientNames.push(item.name);
+            }
+          });
+  
+          console.log('Hozzávalók:', ingredientNames);
+          this.setState({ ingredientOptions: ingredientNames });
+        });
+      }
     });
-}
+  }
+  
+  
 
 
 handleUpdateQuantity = () => {
@@ -172,7 +247,7 @@ handleUpdateQuantity = () => {
       }, {});
   
       // Reference to the Firebase path of the selected item
-      const itemRef = Firebase.database().ref('sale').child(this.state.selectedItem.id);
+      const itemRef = Firebase.database().ref(`sale/${this.state.userId}`).child(this.state.selectedItem.id);
   
       // Update Firebase with the new name, price, and ingredients
       itemRef.update({
@@ -198,7 +273,7 @@ handleUpdateQuantity = () => {
   
 
 handleAddItem = () => {
-    const itemsRef = Firebase.database().ref('products');
+    const itemsRef = Firebase.database().ref(`products/${this.state.userId}`);
     const newItem = {
         nev: this.nevInput.value,
         ar: this.priceInput.value,
@@ -210,7 +285,7 @@ handleAddItem = () => {
 }
 
 handleDeleteItem = (itemId) => {
-    const itemsRef = Firebase.database().ref('sale').child(itemId);
+    const itemsRef = Firebase.database().ref(`sale/${this.state.userId}`).child(itemId);
     itemsRef.remove();
     this.setState({ openModal: false, selectedItem: null });
 }
@@ -416,26 +491,44 @@ handleSearchChange = (event) => {
                     <div style={{width: "100%"}}>
                         <button type="button" onClick={this.handleAddIngredient}>+ hozzávaló</button>
                         </div>
-                        <label style={{marginTop: 25, marginBottom: 5, fontWeight: "bold"}} htmlFor="categoryInput">Kategória:</label>
-                        <div style={{width: "100%"}}>
+                        <label style={{ marginTop: 20, fontWeight: "bold" }}>Új kategória hozzáadása:</label>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <input
+                            className="input"
+                            placeholder="Új kategória"
+                            value={this.state.newCategoryName}
+                            onChange={(e) => this.setState({ newCategoryName: e.target.value })}
+                        />
+                        <button
+                            onClick={() => {
+                            if (!this.state.newCategoryName.trim()) return;
+                            const categoryRef = Firebase.database().ref(`categories/${this.state.userId}`);
+                            categoryRef.push(this.state.newCategoryName.trim());
+                            this.setState({ newCategoryName: '' });
+                            }}
+                            style={{ marginLeft: 10 }}
+                        >
+                            Hozzáadás
+                        </button>
+                        </div>
+                        <div 
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <select 
                                 id="categoryInput"
                                 className="input width60p"
                                 value={this.state.selectedCategory} 
                                 onChange={(e) => this.setState({ selectedCategory: e.target.value })}
-                            >
+                                >
                                 <option value="" disabled>Válassz kategóriát</option>
-                                <option value="meleg">Meleg</option>
-                                <option value="üdítők">Üdítők</option>
-                                <option value="borok">Borok</option>
-                                <option value="koktel">Koktel</option>
-                                <option value="rovid2">Rovid2</option>
-                                <option value="rovid4">Rovid4</option>
-                                <option value="sör">Sör</option>
-                                <option value="snack">Snack</option>
-                                <option value="jeges italok">Jeges Italok</option>
+                                {this.state.customCategories.map((cat, index) => (
+                                    <option key={index} value={cat}>{cat}</option>
+                                ))}
                             </select>
+
                         </div>
+                        
+
+
                     </div>
 
                     
@@ -452,4 +545,4 @@ handleSearchChange = (event) => {
   }
 }
 
-export default withAuth(Raktarkeszlet);
+export default withAuth(Termekek);

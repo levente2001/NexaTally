@@ -47,8 +47,9 @@ class Home extends React.Component {
       user: '',
       dolgozo: '',
       szamlalo: null,
-      isVisible: false,
-      currentDate: new Date()
+      isVisible: true,
+      currentDate: new Date(),
+      customCategories: [],
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -66,7 +67,7 @@ class Home extends React.Component {
   handleZaras(e) {
     e.preventDefault();
     initialize();
-    const itemsRef = Firebase.database().ref('rev');
+    const itemsRef = Firebase.database().ref(`rev/${this.state.userId}`);
     itemsRef.remove();
     let numbers = this.state.lista
     let result = numbers.filter(item => item.vendeg)
@@ -109,7 +110,7 @@ class Home extends React.Component {
   handleSubmit(e) {
     e.preventDefault();
     initialize();
-    const itemsRef = Firebase.database().ref('items');
+    const itemsRef = Firebase.database().ref(`items/${this.state.userId}`);
     const item = {
       user: this.state.value
     }
@@ -122,9 +123,9 @@ class Home extends React.Component {
   handleSubmitFiz(e) {
     e.preventDefault();
     initialize();
-    const itemsRef = Firebase.database().ref('items/' + this.state.id);
-    const itemsRefP = Firebase.database().ref('tetelek/');
-    const itemsRefR = Firebase.database().ref('rev');
+    const itemsRef = Firebase.database().ref(`items/${this.state.userId}/${this.state.id}`);
+    const itemsRefP = Firebase.database().ref(`tetelek/${this.state.userId}`);
+    const itemsRefR = Firebase.database().ref(`rev/${this.state.userId}`);
     let numbers = this.state.lista;
     let result = numbers.filter(item => item.vendeg === this.state.cimnev).reduce((total, currentValue) => total = total + currentValue.ar * currentValue.szamlalo,0);  
     itemsRefR.push({
@@ -136,7 +137,7 @@ class Home extends React.Component {
       for (let item in items) {
         if(items[item].vendeg === this.state.cimnev){
           let id = item
-          const delet = Firebase.database().ref('tetelek/' + id)
+          const delet = Firebase.database().ref(`tetelek/${this.state.userId}/${id}`);
           delet.remove()
         }
       }
@@ -148,279 +149,197 @@ class Home extends React.Component {
     })*/
   }
 
-  handleSubmitTetelTorles(e) {
+  handleSubmitTetelTorles = (e) => {
     e.preventDefault();
-    initialize();
-    
-    const itemsRef = Firebase.database().ref('tetelek/' + this.state.idt);
-    const productsRef = Firebase.database().ref('sale');
-    const warehouseRef = Firebase.database().ref('warehouse');
+    const itemsRef = Firebase.database().ref(`tetelek/${this.state.userId}/${this.state.idt}`);
+    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
+    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
   
-    // Fetch the current state of the item to get its tetel and szamlalo
     itemsRef.once('value', itemSnapshot => {
       const itemData = itemSnapshot.val();
+      if (!itemData) return;
   
-      if (itemData) {
-        const tetelName = itemData.tetel;
-        const szamlaloValue = itemData.szamlalo || 0;
+      productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
+        const products = productSnapshot.val();
+        if (!products) return;
   
-        // Now, fetch the product by its name
-        productsRef.orderByChild('nev').equalTo(tetelName).once('value', productSnapshot => {
-          const products = productSnapshot.val();
+        const productId = Object.keys(products)[0];
+        const productData = products[productId];
+        const ingredients = productData.ingredients || {};
   
-          if (products) {
-            const productId = Object.keys(products)[0];
-            const productData = products[productId];
+        for (let name in ingredients) {
+          const totalToReturn = ingredients[name] * (itemData.szamlalo || 1);
+          warehouseRef.child(name).once('value').then(snap => {
+            const current = snap.val().quantity;
+            warehouseRef.child(name).update({ quantity: current + totalToReturn });
+          });
+        }
   
-            // If the product has an ingredients list, replenish ingredient quantities in the warehouse
-            if (productData.ingredients) {
-              for (let ingredientName in productData.ingredients) {
-                const usedQuantity = productData.ingredients[ingredientName] * szamlaloValue;
-
-                // Retrieve the current quantity of the ingredient from the warehouse
-                warehouseRef.child(ingredientName).once('value', ingredientSnapshot => {
-                  const ingredientInWarehouse = ingredientSnapshot.val();
-
-                  if (ingredientInWarehouse) {
-                    // Add the used quantity back to the current quantity in the warehouse
-                    const newQuantity = ingredientInWarehouse.quantity + usedQuantity;
-
-                    // Update the warehouse with the new quantity
-                    warehouseRef.child(ingredientName).update({ quantity: newQuantity });
-                  }
-                });
-              }
-            }
-
-            // (Optional) If you also want to increment the product's quantity (if any), you can keep this
-            if (typeof productData.quantity !== 'undefined') {
-              const newQuantity = productData.quantity + szamlaloValue;
-              productsRef.child(productId).update({ quantity: newQuantity });
-            }
-          }
-        });
-  
-        // Finally, remove the item from the database
         itemsRef.remove();
-  
-        // Update component's state to close the modal
-        this.setState({
-          openModalll: false
-        });
-      }
+        this.setState({ openModalll: false });
+      });
     });
-}
+  };
+  
 
   
 
-  decrementSzamlalo = (itemId) => {
-    const itemRef = Firebase.database().ref('tetelek/' + itemId);
-    const productsRef = Firebase.database().ref('sale');
-  
-    // Fetch the current state of the item
-    itemRef.once('value', itemSnapshot => {
-      const itemData = itemSnapshot.val();
-  
-      if (itemData) {
-        // If szamlalo exists in item, increment it, otherwise set it to 1
-        const newSzamlalo = (itemData.szamlalo || 0) - 1;
-        
-        // Update the szamlalo in the database for the item
-        itemRef.update({ szamlalo: newSzamlalo });
-  
-        // Also update the szamlalo in your component's state (if needed)
-        this.setState({ szamlalo: newSzamlalo });
-  
-        // Now, fetch the product by its name (assumed to be stored in itemData.tetel)
-        productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
-          const products = productSnapshot.val();
-  
-          // Assuming product names are unique, there should be only one matching product
-          if (products) {
-            const productId = Object.keys(products)[0];
-            const productData = products[productId];
-  
-            // Deduct the ingredient quantities for the added product
-            if (productData && productData.ingredients) {
-                const ingredientData = productData.ingredients;
-  
-                // Loop through each ingredient associated with the product
-                for (let ingredientName in ingredientData) {
-                    const requiredQuantity = ingredientData[ingredientName];
-  
-                    // Retrieve the current quantity of the ingredient from the warehouse in Firebase
-                    const warehouseRef = Firebase.database().ref(`warehouse/${ingredientName}`);
-                    warehouseRef.once('value', ingredientSnapshot => {
-                        const ingredientInWarehouse = ingredientSnapshot.val();
-  
-                        if (ingredientInWarehouse) {
-                            // Deduct the required quantity from the current quantity in the warehouse
-                            const newQuantity = ingredientInWarehouse.quantity + requiredQuantity;
-  
-                            // Update the warehouse with the new quantity
-                            warehouseRef.update({ quantity: newQuantity });
-                        }
-                    });
-                }
-            }
-          }
+decrementSzamlalo = (itemId) => {
+  const itemRef = Firebase.database().ref(`tetelek/${this.state.userId}/${itemId}`);
+  const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
+  const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
+
+  itemRef.once('value', itemSnapshot => {
+    const itemData = itemSnapshot.val();
+    if (!itemData || (itemData.szamlalo || 0) <= 0) return;
+
+    productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
+      const products = productSnapshot.val();
+      if (!products) return;
+
+      const productId = Object.keys(products)[0];
+      const productData = products[productId];
+      const ingredients = productData.ingredients || {};
+
+      for (let name in ingredients) {
+        warehouseRef.child(name).once('value').then(snap => {
+          const current = snap.val().quantity;
+          warehouseRef.child(name).update({ quantity: current + ingredients[name] });
         });
       }
+
+      const newSzamlalo = (itemData.szamlalo || 0) - 1;
+      itemRef.update({ szamlalo: newSzamlalo });
+      this.setState({ szamlalo: newSzamlalo });
     });
-  }
+  });
+};
+
   
 
   incrementSzamlalo = (itemId) => {
-    const itemRef = Firebase.database().ref('tetelek/' + itemId);
-    const productsRef = Firebase.database().ref('sale');
+    const itemRef = Firebase.database().ref(`tetelek/${this.state.userId}/${itemId}`);
+    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
+    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
   
-    // Fetch the current state of the item
     itemRef.once('value', itemSnapshot => {
       const itemData = itemSnapshot.val();
+      if (!itemData) return;
   
-      if (itemData) {
-        // If szamlalo exists in item, increment it, otherwise set it to 1
-        const newSzamlalo = (itemData.szamlalo || 0) + 1;
-        
-        // Update the szamlalo in the database for the item
-        itemRef.update({ szamlalo: newSzamlalo });
+      productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
+        const products = productSnapshot.val();
+        if (!products) return;
   
-        // Also update the szamlalo in your component's state (if needed)
-        this.setState({ szamlalo: newSzamlalo });
+        const productId = Object.keys(products)[0];
+        const productData = products[productId];
+        const ingredients = productData.ingredients || {};
   
-        // Now, fetch the product by its name (assumed to be stored in itemData.tetel)
-        productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
-          const products = productSnapshot.val();
+        // Ellenőrzés: van-e elég alapanyag
+        const checkPromises = Object.entries(ingredients).map(([name, qty]) => 
+          warehouseRef.child(name).once('value').then(snap => {
+            const available = snap.val()?.quantity ?? 0;
+            if (available < qty) throw new Error(`Nincs elég ${name}`);
+          })
+        );
   
-          // Assuming product names are unique, there should be only one matching product
-          if (products) {
-            const productId = Object.keys(products)[0];
-            const productData = products[productId];
-  
-            // Deduct the ingredient quantities for the added product
-            if (productData && productData.ingredients) {
-                const ingredientData = productData.ingredients;
-  
-                // Loop through each ingredient associated with the product
-                for (let ingredientName in ingredientData) {
-                    const requiredQuantity = ingredientData[ingredientName];
-  
-                    // Retrieve the current quantity of the ingredient from the warehouse in Firebase
-                    const warehouseRef = Firebase.database().ref(`warehouse/${ingredientName}`);
-                    warehouseRef.once('value', ingredientSnapshot => {
-                        const ingredientInWarehouse = ingredientSnapshot.val();
-  
-                        if (ingredientInWarehouse) {
-                            // Deduct the required quantity from the current quantity in the warehouse
-                            const newQuantity = ingredientInWarehouse.quantity - requiredQuantity;
-  
-                            // Update the warehouse with the new quantity
-                            warehouseRef.update({ quantity: newQuantity });
-                        }
-                    });
-                }
+        Promise.all(checkPromises)
+          .then(() => {
+            // Ha van elég, frissítjük
+            for (let name in ingredients) {
+              warehouseRef.child(name).once('value').then(snap => {
+                const current = snap.val().quantity;
+                warehouseRef.child(name).update({ quantity: current - ingredients[name] });
+              });
             }
-          }
-        });
-      }
+  
+            const newSzamlalo = (itemData.szamlalo || 0) + 1;
+            itemRef.update({ szamlalo: newSzamlalo });
+            this.setState({ szamlalo: newSzamlalo });
+          })
+          .catch(err => alert(err.message));
+      });
     });
-  }
+  };
+  
   
 
 
-handleSubmitTerm(e) {
-  e.preventDefault();
-  initialize();
-  const itemsRef = Firebase.database().ref('tetelek');
-  const productsRef = Firebase.database().ref('sale');
-  const warehouseRef = Firebase.database().ref('warehouse');
-  const { cimnev, tetel, ar, szamlalo } = this.state;
+  handleSubmitTerm() {
+    initialize();
+    const itemsRef = Firebase.database().ref(`tetelek/${this.state.userId}`);
+    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
+    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
+    const { cimnev, tetel, ar, szamlalo } = this.state;
 
-  // Filter by tetel
-  itemsRef.orderByChild('tetel').equalTo(tetel).once('value', snapshot => {
-    const matchingItems = snapshot.val();
-    let existingItem = null;
-    let itemId = null;
-
-    // Check if vendeg also matches among the filtered items
-    if (matchingItems) {
-      for (let key in matchingItems) {
-        if (matchingItems[key].vendeg === cimnev) {
-          existingItem = matchingItems[key];
-          itemId = key;
-          break;
+    if(!cimnev) {
+      alert(`Nincs kiválasztott vendég`);
+      return;
+    };
+  
+    itemsRef.orderByChild('tetel').equalTo(tetel).once('value', snapshot => {
+      const matchingItems = snapshot.val();
+      let existingItem = null;
+      let itemId = null;
+  
+      if (matchingItems) {
+        for (let key in matchingItems) {
+          if (matchingItems[key].vendeg === cimnev) {
+            existingItem = matchingItems[key];
+            itemId = key;
+            break;
+          }
         }
       }
-    }
-
-    if (existingItem) {
-      // If item already exists with matching tetel and vendeg, get its key and update szamlalo
-
-      // Get the current szamlalo from the existing item
-      const currentSzamlalo = existingItem.szamlalo || 0;
-
-      // Increment the szamlalo by 1
-      const incrementedSzamlalo = currentSzamlalo + 1;
-
-      // Update the szamlalo in the database
-      itemsRef.child(itemId).update({ szamlalo: incrementedSzamlalo }, (error) => {
-        if (error) {
-          console.error("Failed to update szamlalo:", error);
-        } else {
-          console.log("Szamlalo successfully updated!");
+  
+      if (existingItem) {
+        const currentSzamlalo = existingItem.szamlalo || 0;
+        const incrementedSzamlalo = currentSzamlalo + 1;
+  
+        itemsRef.child(itemId).update({ szamlalo: incrementedSzamlalo });
+      } else {
+        const item = {
+          vendeg: cimnev,
+          tetel: tetel,
+          ar: ar,
+          szamlalo: szamlalo,
+        };
+        itemsRef.push(item);
+      }
+  
+      // Update warehouse
+      productsRef.orderByChild('nev').equalTo(tetel).once('value', productSnapshot => {
+        const products = productSnapshot.val();
+        if (products) {
+          const productId = Object.keys(products)[0];
+          const productData = products[productId];
+  
+          if (productData.ingredients) {
+            for (let ingredientName in productData.ingredients) {
+              const requiredQuantity = productData.ingredients[ingredientName];
+              warehouseRef.child(ingredientName).once('value', snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                  const newQuantity = data.quantity - requiredQuantity;
+                  warehouseRef.child(ingredientName).update({ quantity: newQuantity });
+                }
+              });
+            }
+          }
         }
       });
 
-    } else {
-      // If item does not exist, add it as a new item
-      const item = {
-        vendeg: cimnev,
-        tetel: tetel,
-        ar: ar,
-        szamlalo: szamlalo,
-      };
-      itemsRef.push(item);
-    }
-
-    // After adding the item or updating szamlalo, fetch the product details
-  productsRef.orderByChild('nev').equalTo(tetel).once('value', productSnapshot => {
-    const products = productSnapshot.val();
-
-    if (products) {
-      const productId = Object.keys(products)[0];
-      const productData = products[productId];
-
-      // If the product has an ingredients list, decrement ingredient quantities from the warehouse
-      if (productData.ingredients) {
-        for (let ingredientName in productData.ingredients) {
-          const requiredQuantity = productData.ingredients[ingredientName];
-
-          // Retrieve the current quantity of the ingredient from the warehouse
-          warehouseRef.child(ingredientName).once('value', ingredientSnapshot => {
-            const ingredientInWarehouse = ingredientSnapshot.val();
-
-            if (ingredientInWarehouse) {
-              // Deduct the required quantity from the current quantity in the warehouse
-              const newQuantity = ingredientInWarehouse.quantity - requiredQuantity;
-
-              // Update the warehouse with the new quantity
-              warehouseRef.child(ingredientName).update({ quantity: newQuantity });
-            }
-          });
-        }
-      }
-    }
-  });
-
-    // Reset component state
-    this.setState({
-      vendeg: '',
-      tetel: '',
-      ar: '',
-      szamlalo: ''
+      this.onCloseModal();
+  
+      // Reset state
+      this.setState({
+        vendeg: '',
+        tetel: '',
+        ar: '',
+        szamlalo: ''
+      });
     });
-  });
-}
+  }
+  
 
 toggleFullScreen() {
   let elem = document.documentElement;
@@ -484,20 +403,26 @@ onCloseMmodallll = ()=>{
 
 componentDidMount() {
   initialize();
+  console.log("lefut a componentdidmount");
   Firebase.auth().onAuthStateChanged((user) => {
     this.setState({
-      dolgozo: user.email
+      dolgozo: user.email,
+      userId: user.uid
     });
-    if (user.email === 'kalolevente@gmail.com' || user.email === 'lalivaroskut@gmail.com') {
+    /*if (user.email === 'kalolevente@gmail.com' || user.email === 'lalivaroskut@gmail.com') {
       this.setState({ isVisible: true });
     } else {
       this.setState({ isVisible: false });
-    }
-  });
-  const itemsRef = Firebase.database().ref('items');
-  const itemsRefT = Firebase.database().ref('sale');
-  const itemsRefR = Firebase.database().ref('rev');
-  const itemsRefP = Firebase.database().ref('tetelek');
+    }*/
+    const categoriesRef = Firebase.database().ref(`categories/${user.uid}`);
+    categoriesRef.on('value', (snapshot) => {
+    const categoryList = snapshot.val() || {};
+    const categories = Object.values(categoryList);
+    this.setState({ customCategories: categories });
+    const itemsRef = Firebase.database().ref(`items/${this.state.userId}`);
+  const itemsRefT = Firebase.database().ref(`sale/${this.state.userId}`);
+  const itemsRefR = Firebase.database().ref(`rev/${this.state.userId}`);
+  const itemsRefP = Firebase.database().ref(`tetelek/${this.state.userId}`);
   itemsRefR.on('value', (snapshot) => {
     let items = snapshot.val();
     let ossz = [];
@@ -542,6 +467,7 @@ componentDidMount() {
       termekek: newState
     });
   });
+
   itemsRefP.on('value', (snapshot) => {
     let items = snapshot.val();
     let newState = [];
@@ -558,6 +484,9 @@ componentDidMount() {
       });
     }
   });
+  });
+  });
+  
 
   this.timer = setInterval(() => {
     this.setState({ currentDate: new Date() });
@@ -589,36 +518,36 @@ componentWillUnmount() {
       <div className="container">
         <div className="grid">
           <div className="innergrid">
-            <div className="grid-item lt-radius innergrid-full-button">
+            <div className="grid-item lt-radius innergrid-full-button mobilonnemkell">
               {/*<button className="button" onClick={this.handleZaras}> ZÁRÁS </button>*/}
-              <button style={{width: "100%", fontSize: "15px", backgroundColor: "#70B69F"}} onClick={this.toggleFullScreen.bind(this)}>Fullscreen</button>
+              <button className="fullscreen-button" onClick={this.toggleFullScreen.bind(this)}>Fullscreen</button>
             </div>
             <div className="grid-item innergrid-admin-button">
             {this.state.isVisible && (
               <div className="inner" style={{ width: "100%"}}>
-                <Link style={{ textDecoration: "none", backgroundColor: "#F3BB61", color: "white", fontWeight: "bold", padding: "0.7rem"}} to="/admin">Admin</Link>
+                <Link className="admintext" to="/admin">Admin</Link>
               </div>
             )}
             </div>
-            <div className="grid-item">
+            <div className="grid-item dolgozo mobilonnemkell">
               <h2>{this.state.dolgozo}</h2>
             </div>
-            <div className="grid-item">
+            <div className="grid-item mobilonnemkell">
               <h2>{currentDate.toLocaleDateString()}</h2>
             </div>
-            <div className="grid-item">
+            <div className="grid-item mobilonnemkell">
               <h2>{currentDate.toLocaleTimeString()}</h2>
             </div>
-            <div className="grid-item rt-radius innergrid-kijel-button">
+            <div className="grid-item rt-radius innergrid-kijel-button mobilonnemkell ">
             <button style={{ width: "100%", fontSize: "1rem"}} onClick={handleSignOut}> Kijelentkezés </button>
             </div>
           </div>
 
           <div className="innergrid-secondrow">
-            <div className="grid-item">
+            <div className="grid-item mobilonnemkell">
               <p>{resultt} Ft</p>
             </div>
-            <div className="grid-item">
+            <div className="grid-item mobilonnemkell">
               <h2 style={{fontSize: "3rem"}}>{this.state.cimnev}</h2>
             </div>
 
@@ -626,24 +555,35 @@ componentWillUnmount() {
 
             <div className="grid-item innergrid-plus-button">
                 <button onClick={this.onClickButton} className="buttonprof"> + </button>
-                  <Modal open={this.state.openModal} onClose={this.onCloseModal}>
+                {this.state.openModal && (
+                  <div className="modal" open={this.state.openModal} onClose={this.onCloseModal}>
+                    <span className="close" onClick={() => {this.setState({openModal: false})}}>&times;</span>
+                    <div className="modal-content">
                     <div className="modd">
-                    <div className="szuro">
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "meleg"})}}>Meleg italok</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "üdítők"})}}>Üdítők</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "borok"})}}>Borok</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "koktel"})}}>Koktélok</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "rovid2"})}}>Rövid 2cl</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "rovid4"})}}>Rövid 4cl</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "sör"})}}>Sör</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "snack"})}}>Snackek</button>
-                      <button className="modalhozz" onClick={() => {this.setState({modcat: "jeges italok"})}}>Jeges italok </button>
-                    </div>
+                      <div className="szuro">
+                        {this.state.customCategories.map((cat, idx) => (
+                          <button key={idx} className="modalhozz" onClick={() => this.setState({ modcat: cat })}>
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+
 
                     <ul className="termlist">
                       {this.state.termekek.filter(item => item.cat === this.state.modcat).map((item) => {
                         return (
-                          <li className="nevekli" onClick={() => {this.setState({szamlalo: 1});this.setState({ar: item.ar}); this.setState({tetel: item.nev})}} key={item.id}>
+                          <li className="nevekli" onClick={() =>
+                            this.setState(
+                              {
+                                szamlalo: 1,
+                                ar: item.ar,
+                                tetel: item.nev
+                              },
+                              () => {
+                                this.handleSubmitTerm();
+                              }
+                            )
+                          } key={item.id}>
                             <h4>{item.nev}</h4>
                             <h3>{item.ar} Ft</h3>
                             
@@ -656,8 +596,13 @@ componentWillUnmount() {
                     </div>
 
                     
-                  <button className="modalhozz" onClick={this.handleSubmitTerm}>Hozzáad</button>
-                </Modal>
+                  {/*<button className="modalhozz" onClick={this.handleSubmitTerm}>Hozzáad</button>*/}
+                      
+                  </div>
+                
+                    
+                </div>
+              )}
             </div>
             <div className="grid-item innergrid-fiz-button">
                 <Modal open={this.state.openModalllll} onClose={this.onCloseMmodallll}>
@@ -670,21 +615,23 @@ componentWillUnmount() {
           </div>
 
           <div className="innergrid-3rdrow">
-            <div className="grid-item">
+            <div className="grid-item vendeglista mobilonnemkell">
               <h2>Vendéglista</h2>
             </div>
-            <div className="grid-item-left">
+            <div className="grid-item-left fizetendo-mobile">
               <h2 className="fizetendo-left-align">Fizetendő: {result} Ft</h2>
             </div>
           </div>
 
           <div className="innergrid-4throw">
-            <div className="grid-item gridlist-padding lb-radius">
+            <div className="grid-item gridlist-padding lb-radius bordernone">
               <form onSubmit={this.handleSubmit}>
+                <div className="mobilhozzaad">
                 <label>
                   <input type="text" value={this.state.value} placeholder="Vendég neve" onChange={this.handleChange} />
                 </label>
                 <input className="ipuntplus" type="submit" value="+" />
+                </div>
               </form>
               <ul className="gridlist">
                 {this.state.items.map((item) => {
@@ -715,10 +662,16 @@ componentWillUnmount() {
                   )
                 })}
               </ul>
-              <Modal open={this.state.openModalll} onClose={this.onCloseModalll}>
-                  <h6>BIZTOSAN TÖRÖLNI AKAROD EZT A TÉTELT?</h6>
-                  <button className="modalhozz" onClick={this.handleSubmitTetelTorles}>TÖRLÉS</button>
-              </Modal>
+              {this.state.openModalll && (
+                <div className="modal">
+                  <div className="modal-content">
+                    <span className="close" onClick={() => {this.setState({openModalll: false})}}>&times;</span>
+                    <h6>BIZTOSAN TÖRÖLNI AKAROD EZT A TÉTELT?</h6>
+                    <button className="modalhozz" onClick={this.handleSubmitTetelTorles}>TÖRLÉS</button>
+                  </div>
+                </div>
+              )}
+              
             </div>
           </div>  
         </div>

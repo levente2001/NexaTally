@@ -9,6 +9,16 @@
   background-color: #fff;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: scroll;
+}
+
 p {
   font-size: 2vw;
   font-weight: bold;
@@ -32,12 +42,12 @@ p {
 .grid {
   width: 100%;
   grid-template-rows: 0.6fr 1.5fr 1fr 4fr;
-  display: inline-grid;
+  display: grid;
 }
 .szurogrid {
   width: 100%;
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-  display: inline-grid;
+  display: grid;
 }
 
 .moddgrid {
@@ -45,7 +55,7 @@ p {
   height: 50vh;
   grid-template-columns: 1fr 5fr;
   border: 1px solid red;
-  display: inline-grid;
+  display: grid;
 }
 
 .gridlist {
@@ -58,13 +68,13 @@ p {
   width: 100%;
   border-top: 1px solid red;
   grid-template-rows: 1fr 1fr;
-  display: inline-grid;
+  display: grid;
   overflow: scroll;
 }
 
 .inner-nevek-grid {
   width: 100%;
-  display: inline-grid;
+  display: grid;
 }
 
 .fizetendo-left-align {
@@ -77,23 +87,23 @@ p {
 .innergrid {
   width: 100%;
   grid-template-columns: 0.75fr 0.75fr 3fr 1fr 1fr 1fr;
-  display: inline-grid;
+  display: grid;
 }
 
 .innergrid-secondrow {
   width: 100%;
   grid-template-columns: 1.5fr 3fr 1fr 2fr;
-  display: inline-grid;
+  display: grid;
 }
 .innergrid-3rdrow {
   width: 100%;
   grid-template-columns: 1.5fr 6fr;
-  display: inline-grid;
+  display: grid;
 }
 .innergrid-4throw {
   width: 100%;
   grid-template-columns: 1.5fr 6fr;
-  display: inline-grid;
+  display: grid;
 }
 
 .grid-item {
@@ -279,7 +289,7 @@ ul.termlist {
 
 ul.cucclist {
   padding: 10px;
-  width: 74vw;
+  width: 90%;
   height: 45vh;
   margin: auto;
   list-style-type: none;
@@ -328,9 +338,6 @@ ul.nevek {
 }
 
 
-
-
-
 li {
   background-color: #34568B;
   border-radius: 10px;
@@ -365,7 +372,7 @@ ul.cucclist li {
   background-color: #fff;
   border-radius: 10px;
   margin-bottom: 30px;
-  width: 70vw;
+  width: 100%;
   line-height: 2em;
   height: 2em;
   color: #fff;
@@ -398,18 +405,17 @@ ul.cucclisttermekek li {
 }
 
 .cucclihozz {
-  background-color: #AEB6BF;
-  border-radius: 10px;
-  width: 30vw;
-  line-height: 2em;
-  text-align: center;
-  margin-left: 150px;
-  height: 2em;
-  font-size: 15px;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-
+    background-color: #AEB6BF;
+    border-radius: 10px;
+    width: 300px;
+    line-height: 2em;
+    text-align: center;
+    margin-left: 100px;
+    height: 2em;
+    font-size: 15px;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .cucclihozzmasik {
@@ -510,10 +516,10 @@ ul.cucclisttermekek li {
   width: 70vw;
   line-height: 2em;
   padding: 10px;
-  margin: 10px;
+  margin: 10px 0px;
   text-align: center;
   display: flex;
-  height: 2em;
+  height: fit-content;
   color: #fff;
   font-weight: bold;
 }
@@ -522,12 +528,12 @@ ul.cucclisttermekek li {
   background-color: #AEB6BF;
   border-radius: 10px;
   width: 95%;
-  line-height: 2em;
+  line-height: 50px;
   padding: 10px;
   margin: 10px;
   text-align: center;
   display: flex;
-  height: 2em;
+  height: fit-content;
   color: #fff;
   font-weight: bold;
 }
@@ -606,6 +612,37 @@ button {
   border-radius: 10px;
   font-weight: bold;
   width: 40px;
+  cursor: pointer;
+}
+
+.modal {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 25px;
   cursor: pointer;
 }
 
@@ -695,9 +732,8 @@ form {
 }
 
 .ipuntplus {
-  width: 40px;
+  width: 100%;
   height: 40px;
-  margin-left: 10px;
   line-height: 4.3vh;
   font-size: 2vw;
   border: none;
@@ -721,8 +757,12 @@ form {
 
 }
 
-
-
+.fullscreen-button {
+  width: 100%;
+  font-size: 1rem;
+  background-color: #70B69F;
+  padding: 0.5em;
+}
 
 
 
@@ -753,3 +793,278 @@ form {
     width: 120px;
   }
 }
+
+.admintext {
+  text-decoration: none;
+  background-color: rgb(243, 187, 97);
+  color: white;
+  font-weight: bold;
+  padding: 0.7rem;
+}
+
+@media (max-width: 768px) {
+
+  .container {
+    width: 100vw;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  
+  
+
+  .fullscreen-button {
+    font-size: 0.9rem;
+    padding: 0.3em;
+  }
+
+  .grid {
+    height: 100%;
+    grid-template-rows: auto;
+  }
+  .grid,
+  .innergrid,
+  .innergrid-secondrow,
+  .innergrid-3rdrow,
+  .innergrid-4throw {
+    display: grid; 
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto;
+    width: 100%;
+  }
+
+  .mobilonnemkell {
+    display: none;
+  }
+
+  .lb-radius {
+    border-radius: 0px;
+  }
+
+  .gridlist {
+    height: 10vh;
+  }
+
+  .grid-item {
+    width: 100%;
+    padding: 0px;
+  }
+
+  .rb-radius {
+    border-radius: 0px;
+  }
+
+  .grid-item-left {
+    border: solid 1.5px black;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    background-color: #fff;
+    width: 100%;
+  }
+
+  .innergrid-admin-button {
+    height: 100%;
+  }
+
+  h2 {
+    color: #000;
+    font-size: 20px;
+    font-family: Times New Roman;
+    font-weight: bold;
+}
+
+.mobilhozzaad {
+  display: grid;
+  width: 90vw;
+  grid-template-columns: 4fr 1fr;
+}
+
+  .buttonprof,
+  .buttonfiz {
+    font-size: 6vw;
+    width: 100%;
+    height: 50px;
+  }
+
+  .input,
+  .ipuntplus {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  .ipuntplus {
+    margin-top: 10px;
+    font-size: 20px;
+  }
+
+  ul.gridlist {
+    flex-wrap: wrap;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    width: 100%;
+  }
+  li.nevekli {
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  ul.gridlist {
+    flex-wrap: wrap;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    width: 100%;
+  }
+  
+
+  li.nevekli {
+    margin: 0px 5px;
+    padding: 10px 10px;
+    font-size: 16px;
+    display: flex;
+    white-space: nowrap;
+    align-items: center;
+}
+  
+  .szamlalo,
+  .cucclihozz,
+  .szamlalop,
+  .szamlalom,
+  .szamlalok {
+    width: 70%;
+    margin: 0px 0;
+    padding-left: 0px;
+    padding-right: 0px;
+    height: 50px;
+    line-height: 50px;
+  }
+
+  .szamlalok {
+    width: 100px;
+    padding: 0px 10px;
+    height: 50px;
+    border-radius: 0px;
+    border-radius: 0px 10px 10px 0px;
+  }
+  .szamlalom {
+    width: 60px;
+    padding: 0px 10px;
+    height: 50px;
+    border-radius: 0px;
+  }
+  .szamlalop {
+    width: 60px;
+    padding: 0px 10px;
+    height: 50px;
+    border-radius: 0px;
+  }
+
+
+  .modd {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .szuro {
+    height: 80px;
+    display: flex;
+    flex-direction: row;
+    overflow: scroll;
+    width: 100%;
+  }
+
+  ul.termlist li {
+    background-color: #123456;
+    border-radius: 5px;
+    display: inline-block;
+    margin: 5px;
+    width: 120px;
+    line-height: 10px;
+    height: 100px;
+    cursor: pointer;
+    color: #fff;
+    font-weight: bold;
+}
+
+  ul.termlist {
+    width: 100%;
+    height: 50%;
+  }
+
+  
+
+  button {
+    font-size: 16px;
+    width: 100%;
+    padding: 10px;
+    height: auto;
+  }
+
+  input {
+    border-radius: 10px 0px 0px 10px;
+    height: 40px;
+    margin-top: 0px;
+    margin: 0px;
+  }
+
+  .ipuntplus {
+    width: 100%;
+    height: 40px;
+    border: none;
+    margin-top: 8px;
+    color: #fff;
+    border-radius: 0px 10px 10px 0px;
+    background-color: green;
+    cursor: pointer;
+  
+  }
+
+  .ipuntplus:hover {
+    width: 100%;
+    height: 40px;
+    border: none;
+    margin-top: 8px;
+    color: #fff;
+    border-radius: 0px 10px 10px 0px;
+    background-color: green;
+    cursor: pointer;
+  
+  }
+  
+  .input {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  ul.cucclist {
+    width: 100%;
+  }
+
+  .admintext {
+    text-decoration: none;
+    background-color: rgb(243, 187, 97);
+    color: white;
+    font-weight: bold;
+    padding: 0.4rem;
+  }
+  
+  ul.cucclist li {
+    width: 100%;
+  }
+  .tetelelista {
+    display: flex;
+    width: 100%;
+    padding: 0px;
+    height: 50px;
+  }
+  
+  
+}
+

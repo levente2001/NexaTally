@@ -20,137 +20,110 @@ class Raktarkeszlet extends React.Component {
           selectedCategory: '',
           selectedQuantitytype: '',
           ingredientName: '',
-          quantity: ''
+          quantity: '',
+          userId: ''
         };
         this.handleChangeIngredientName = this.handleChangeIngredientName.bind(this);
         this.handleChangeQuantity = this.handleChangeQuantity.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
-onClickButton = e =>{
-    e.preventDefault()
-    this.setState({openModal : true})
-}
+    componentDidMount() {
+        initialize();
 
- onCloseModal = ()=>{
-     this.setState({openModal : false})
-     this.setState({selectedItem: ''})
-   }
-onClickButtonn = e =>{
-    e.preventDefault()
-    this.setState({openModall : true})
-}
-
- onCloseModall = ()=>{
-     this.setState({openModall : false})
-   }
-
-
-   handleChangeIngredientName(e) {
-    this.setState({ ingredientName: e.target.value });
-}
-
-handleChangeQuantity(e) {
-    this.setState({ quantity: e.target.value });
-}
-
-
-handleSubmit(e) {
-  e.preventDefault();
-
-  const warehouseRef = Firebase.database().ref(`warehouse/${this.state.ingredientName}`);
-  warehouseRef.set({
-      name: this.state.ingredientName,
-      quantity: parseFloat(this.state.quantity),
-      type: this.state.selectedQuantitytype,
-  });
-
-  // Reset the form
-  this.setState({
-      ingredientName: '',
-      quantity: '',
-      selectedQuantitytype: ''
-  });
-
-  this.onCloseModall();
-}
-
-
-componentDidMount() {
-    initialize();
-
-    const itemsRef = Firebase.database().ref('warehouse');
-
-
-    itemsRef.on('value', (snapshot) => {
-        let items = snapshot.val();
-        let newState = [];
-        for (let item in items) {
-          newState.push({
-            id: item,
-            nev: items[item].name,
-            quantity: items[item].quantity,
-            type: items[item].type
-          });
-        }
-        this.setState({
-          lista: newState
+        Firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                this.setState({ userId: user.uid }, () => {
+                    const itemsRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
+                    itemsRef.on('value', (snapshot) => {
+                        let items = snapshot.val();
+                        let newState = [];
+                        for (let item in items) {
+                            newState.push({
+                                id: item,
+                                nev: items[item].name,
+                                quantity: items[item].quantity,
+                                type: items[item].type
+                            });
+                        }
+                        this.setState({ lista: newState });
+                    });
+                });
+            }
         });
-      });
-}
+    }
 
+    handleChangeIngredientName(e) {
+        this.setState({ ingredientName: e.target.value });
+    }
 
-handleUpdateQuantity = () => {
-  if (this.state.selectedItem && this.quantityInput && this.ingredientNameInput) {
-      const newQuantity = this.quantityInput.value;
-      const newIngredientName = this.ingredientNameInput.value;
-      
-      const itemsRef = Firebase.database().ref('warehouse').child(this.state.selectedItem.id);
-      itemsRef.update({ 
-          name: newIngredientName,
-          quantity: newQuantity 
-      });
-      
-      this.setState({ openModal: false, selectedItem: null });
-  }
-}
+    handleChangeQuantity(e) {
+        this.setState({ quantity: e.target.value });
+    }
 
+    handleSubmit(e) {
+        e.preventDefault();
+        const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}/${this.state.ingredientName}`);
+        warehouseRef.set({
+            name: this.state.ingredientName,
+            quantity: parseFloat(this.state.quantity),
+            type: this.state.selectedQuantitytype,
+        });
+        this.setState({
+            ingredientName: '',
+            quantity: '',
+            selectedQuantitytype: ''
+        });
+        this.onCloseModall();
+    }
 
-handleAddItem = () => {
-    const itemsRef = Firebase.database().ref('warehouse');
-    const newItem = {
-        nev: this.state.ingredientName,
-        quantity: this.state.quantity,
-        type: this.state.selectedQuantitytype,
-    };
-    itemsRef.push(newItem);
-    this.onCloseModall();
-}
+    handleUpdateQuantity = () => {
+        if (this.state.selectedItem && this.quantityInput && this.ingredientNameInput) {
+            const newQuantity = this.quantityInput.value;
+            const newIngredientName = this.ingredientNameInput.value;
+            const itemsRef = Firebase.database().ref(`warehouse/${this.state.userId}`).child(this.state.selectedItem.id);
+            itemsRef.update({ 
+                name: newIngredientName,
+                quantity: newQuantity 
+            });
+            this.setState({ openModal: false, selectedItem: null });
+        }
+    }
 
-handleDeleteItem = (itemId) => {
-    const itemsRef = Firebase.database().ref('warehouse').child(itemId);
-    itemsRef.remove();
-    this.setState({ openModal: false, selectedItem: null });
-}
+    handleDeleteItem = (itemId) => {
+        const itemsRef = Firebase.database().ref(`warehouse/${this.state.userId}`).child(itemId);
+        itemsRef.remove();
+        this.setState({ openModal: false, selectedItem: null });
+    }
 
+    onClickButton = e => {
+        e.preventDefault();
+        this.setState({openModal: true});
+    }
 
-getQuantityStyle = (quantity) => {
-    if (quantity < 10) {
-      return {backgroundColor: '#DC5E5E'};
-    } else if (quantity >= 10 && quantity < 20) {
-      return {backgroundColor: '#E8A86F'};
-    } else if (quantity >= 20 && quantity < 30) {
-      return {backgroundColor: '#F7F76D'};
-    } else {
+    onCloseModal = () => {
+        this.setState({openModal: false, selectedItem: ''});
+    }
+
+    onClickButtonn = e => {
+        e.preventDefault();
+        this.setState({openModall: true});
+    }
+
+    onCloseModall = () => {
+        this.setState({openModall: false});
+    }
+
+    getQuantityStyle = (quantity) => {
+        if (quantity < 10) return {backgroundColor: '#DC5E5E'};
+        if (quantity < 20) return {backgroundColor: '#E8A86F'};
+        if (quantity < 30) return {backgroundColor: '#F7F76D'};
         return {backgroundColor: '#70B69F'};
     }
-  }
-  
-  
 
-handleSearchChange = (event) => {
-    this.setState({ searchTerm: event.target.value });
-  };
+    handleSearchChange = (event) => {
+        this.setState({ searchTerm: event.target.value });
+    };
  
   render() {
     const filteredList = this.state.lista.filter((item) =>
