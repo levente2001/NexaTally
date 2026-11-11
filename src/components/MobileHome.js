@@ -9,6 +9,12 @@ const orderTotal = list => list.reduce((sum, item) =>
 export default class MobileHome extends React.Component {
   state = { screen: "orders", search: "", category: "", guestName: "", filter: "active", notice: "" };
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.selectedGuest && !this.props.selectedGuest && this.state.screen === "detail") {
+      this.setState({ screen: "orders", notice: "Fizetés rögzítve." });
+    }
+  }
+
   chooseGuest = item => {
     this.props.selectGuest(item);
     this.setState({ screen: "detail", notice: "" });
@@ -19,7 +25,7 @@ export default class MobileHome extends React.Component {
     const name = this.state.guestName.trim();
     if (!name) return;
     this.props.createGuest(name);
-    this.setState({ guestName: "", notice: "Vendég hozzáadva. Válaszd ki a listából!" });
+    this.setState({ guestName: "", screen: "new", search: "", notice: "Vendég létrehozva. Válassz terméket!" });
   };
 
   addProduct = item => {
@@ -44,6 +50,7 @@ export default class MobileHome extends React.Component {
       (!selectedCategory || product.cat === selectedCategory) &&
       (product.nev || "").toLocaleLowerCase("hu-HU").includes(searchText));
     const shownGuests = guests.filter(guest =>
+      (filter !== "empty" || !lines.some(line => line.vendeg === guest.user)) &&
       (guest.user || "").toLocaleLowerCase("hu-HU").includes(searchText));
     const openCount = guests.length;
     const title = screen === "new" ? "Új tétel" : screen === "detail" ? selectedGuest || "Rendelés" : "Rendelések";
@@ -72,7 +79,7 @@ export default class MobileHome extends React.Component {
             </div>
             <div className="nexa-segments" role="group" aria-label="Rendelések szűrése">
               <button className={filter === "active" ? "active" : ""} onClick={() => this.setState({ filter: "active" })}>Aktív ({openCount})</button>
-              <button className={filter === "all" ? "active" : ""} onClick={() => this.setState({ filter: "all" })}>Összes</button>
+              <button className={filter === "empty" ? "active" : ""} onClick={() => this.setState({ filter: "empty" })}>Üres asztalok</button>
             </div>
             <label className="nexa-search"><span>⌕</span><input placeholder="Vendég vagy asztal keresése..." value={search} onChange={e => this.setState({ search: e.target.value })} /></label>
             {shownGuests.length ? <div className="nexa-orders">
