@@ -2,6 +2,23 @@
 .nexa-mobile { display: none; }
 .nexa-desktop { display: block; }
 @media (max-width: 767px) {
+  /* The legacy .App uses a centered CSS grid whose child shrinks to its content width. */
+  html, body, #root { width: 100%; min-width: 0; margin: 0; overflow-x: hidden; }
+  .App {
+    display: block;
+    width: 100%;
+    min-height: 100dvh;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: #fafbf9;
+    text-align: left;
+  }
+  .nexa-mobile {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
   .nexa-desktop { display: none !important; }
   .nexa-mobile {
     display: block;
