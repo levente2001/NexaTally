@@ -9,6 +9,7 @@ import { signOut, initialize } from "../utils/firebase";
 import Loader from "../components/loader";
 //import logo from '../mylogo.png';
 import emailjs from '@emailjs/browser';
+import MobileHome from '../components/MobileHome';
 
 function handleSignOut() {
   signOut()
@@ -515,7 +516,26 @@ componentWillUnmount() {
     const { currentDate } = this.state;
   
     return (
-      <div className="container">
+      <>
+      <MobileHome
+        guests={this.state.items}
+        products={this.state.termekek}
+        lines={this.state.lista}
+        categories={this.state.customCategories}
+        selectedGuest={this.state.cimnev}
+        employee={this.state.dolgozo}
+        revenue={resultt}
+        selectGuest={guest => this.setState({ cimnev: guest.user, id: guest.id })}
+        createGuest={name => {
+          Firebase.database().ref("items/" + this.state.userId).push({ user: name });
+        }}
+        addProduct={product => this.setState({ szamlalo: 1, ar: product.ar, tetel: product.nev }, () => this.handleSubmitTerm())}
+        onIncrement={this.incrementSzamlalo}
+        onDecrement={this.decrementSzamlalo}
+        onDelete={id => this.setState({ idt: id }, () => this.handleSubmitTetelTorles({ preventDefault() {} }))}
+        onPay={() => this.handleSubmitFiz({ preventDefault() {} })}
+      />
+      <div className="nexa-desktop"><div className="container">
         <div className="grid">
           <div className="innergrid">
             <div className="grid-item lt-radius innergrid-full-button mobilonnemkell">
@@ -675,7 +695,8 @@ componentWillUnmount() {
             </div>
           </div>  
         </div>
-      </div>
+      </div></div>
+      </>
     );
   }
    
