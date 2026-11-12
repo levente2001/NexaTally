@@ -9,6 +9,7 @@ import Termekek from "./pages/termekek";
 import Raktarkeszlet from "./pages/raktarkeszlet";
 
 import "./App.css";
+import "./styles/mobile-pos.css";
 
 function App() {
   return (

@@ -7,6 +7,8 @@ import { Modal } from 'react-responsive-modal';
 import 'react-responsive-modal/styles.css';
 
 import "../styles/admin.css";
+import MobileProducts from "../components/MobileProducts";
+import { importDemoCatalog } from "../utils/demoCatalog";
 
 
 class Termekek extends React.Component {
@@ -76,10 +78,16 @@ class Termekek extends React.Component {
         e.preventDefault();
         
         const { ingredients, userId } = this.state;
-        const ingredientData = ingredients.reduce((acc, ing) => {
-          acc[ing.name] = parseFloat(ing.quantity);
+        const ingredientData = ingredients.filter(ing => ing.name).reduce((acc, ing) => {
+          acc[ing.name] = Number(ing.quantity);
           return acc;
         }, {});
+        if (!this.state.productName.trim() || !this.state.selectedCategory || !Number.isFinite(Number(this.state.price)) || Number(this.state.price) < 0 ||
+            Object.values(ingredientData).some(q => !Number.isFinite(q) || q <= 0) ||
+            ingredients.some(ing => !ing.name && String(ing.quantity).trim())) {
+          alert("Adj meg érvényes terméknevet, árat, kategóriát és alapanyag-mennyiségeket!");
+          return;
+        }
       
         const warehouseRef = Firebase.database().ref(`warehouse/${userId}`);
         
@@ -122,7 +130,7 @@ class Termekek extends React.Component {
             nev: this.state.productName,
             ingredients: ingredientData,
             cat: this.state.selectedCategory,
-            ar: this.state.price,
+            ar: Number(this.state.price),
           });
       
           // Készlet frissítése (levonás)
@@ -193,6 +201,7 @@ onClickButtonn = e =>{
             id: key,
             nev: items[key].nev,
             ar: items[key].ar,
+            cat: items[key].cat,
             ingredients: Object.entries(items[key].ingredients || {}).map(([name, quantity]) => ({
               name,
               quantity
@@ -229,7 +238,7 @@ onClickButtonn = e =>{
           });
   
           console.log('Hozzávalók:', ingredientNames);
-          this.setState({ ingredientOptions: ingredientNames });
+          this.setState({ ingredientOptions: ingredientNames, warehouseItems: Object.entries(warehouseData).filter(([key, value]) => value && value.name).map(([id, value]) => ({ id, nev: value.name, type: value.type, quantity: value.quantity })) });
         });
       }
     });
@@ -242,7 +251,7 @@ handleUpdateQuantity = () => {
     if (this.state.selectedItem && this.priceInput && this.nevInput) {
       // Convert the ingredients array back to the object structure for Firebase
       const ingredientData = this.state.ingreDients.reduce((acc, ingredient) => {
-        acc[ingredient.name] = ingredient.quantity;
+        if (ingredient.name) acc[ingredient.name] = Number(ingredient.quantity);
         return acc;
       }, {});
   
@@ -252,7 +261,7 @@ handleUpdateQuantity = () => {
       // Update Firebase with the new name, price, and ingredients
       itemRef.update({
         nev:  this.nevInput.value,
-        ar: this.priceInput.value,
+        ar: Number(this.priceInput.value),
         ingredients: ingredientData,
       })
       .then(() => {
@@ -322,10 +331,33 @@ handleSearchChange = (event) => {
  
   render() {
     const filteredList = this.state.lista.filter((item) =>
-    item.nev.toLowerCase().includes(this.state.searchTerm.toLowerCase())
+    (item.nev || '').toLowerCase().includes(this.state.searchTerm.toLowerCase())
   );
     
     return (
+      <>
+      <MobileProducts
+        items={this.state.lista}
+        categories={this.state.customCategories}
+        warehouse={this.state.warehouseItems || []}
+        onSave={async (product, editing) => {
+          const { userId } = this.state;
+          if (!userId) throw new Error("Jelentkezz be!");
+          const path = "sale/" + userId;
+          const reference = editing ? Firebase.database().ref(path + "/" + product.id) : Firebase.database().ref(path).push();
+          const { id, ...data } = product;
+          await reference.set(data);
+        }}
+        onDelete={id => Firebase.database().ref("sale/" + this.state.userId + "/" + id).remove()}
+        onAddCategory={async category => {
+          const normalized = category.trim();
+          if (!normalized) return;
+          if (this.state.customCategories.includes(normalized)) return;
+          await Firebase.database().ref("categories/" + this.state.userId).push(normalized);
+        }}
+        onImportDemo={() => importDemoCatalog(Firebase, this.state.userId)}
+      />
+      <div className="nexa-desktop">
       <div className="main">
 
         <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", width: "60vw"}}>
@@ -408,7 +440,7 @@ handleSearchChange = (event) => {
                                 value={ingredient.quantity}
                                 onChange={(e) => this.handleInputChangee(index, 'quantity', e.target.value)}
                             />
-                            <button onClick={() => this.handleMinusIngredient(index)}>Eltávolítás</button>
+                            <button onClick={() => this.handleMinusIngredientt(index)}>Eltávolítás</button>
                             </div>
                         ))}
                         <div style={{width: "100%"}}>
@@ -540,7 +572,8 @@ handleSearchChange = (event) => {
         </Modal>
         
          
-      </div>
+      </div></div>
+      </>
     );
   }
 }

@@ -7,6 +7,7 @@ import { Modal } from 'react-responsive-modal';
 import 'react-responsive-modal/styles.css';
 
 import "../styles/admin.css";
+import MobileStock from "../components/MobileStock";
 
 
 class Raktarkeszlet extends React.Component {
@@ -63,7 +64,10 @@ class Raktarkeszlet extends React.Component {
 
     handleSubmit(e) {
         e.preventDefault();
-        const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}/${this.state.ingredientName}`);
+        if (!this.state.ingredientName.trim() || !Number.isFinite(Number(this.state.quantity)) || Number(this.state.quantity) < 0 || !this.state.selectedQuantitytype) {
+          alert("Adj meg egy nevet, nemnegatív mennyiséget és mértékegységet!"); return;
+        }
+        const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}/${this.state.ingredientName.trim()}`);
         warehouseRef.set({
             name: this.state.ingredientName,
             quantity: parseFloat(this.state.quantity),
@@ -79,12 +83,13 @@ class Raktarkeszlet extends React.Component {
 
     handleUpdateQuantity = () => {
         if (this.state.selectedItem && this.quantityInput && this.ingredientNameInput) {
-            const newQuantity = this.quantityInput.value;
+            const newQuantity = Number(this.quantityInput.value);
+            if (!Number.isFinite(newQuantity) || newQuantity < 0) { alert("Érvénytelen mennyiség"); return; }
             const newIngredientName = this.ingredientNameInput.value;
             const itemsRef = Firebase.database().ref(`warehouse/${this.state.userId}`).child(this.state.selectedItem.id);
             itemsRef.update({ 
                 name: newIngredientName,
-                quantity: newQuantity 
+                quantity: Number(newQuantity) 
             });
             this.setState({ openModal: false, selectedItem: null });
         }
@@ -131,6 +136,20 @@ class Raktarkeszlet extends React.Component {
   );
     
     return (
+      <>
+        <MobileStock items={this.state.lista}
+          onAdjust={(item, delta) => {
+            const ref = Firebase.database().ref("warehouse/" + this.state.userId + "/" + item.id + "/quantity");
+            ref.transaction(current => {
+              if (current === null) return;
+              const next = Number(current) + delta;
+              return Number.isFinite(next) && next >= 0 ? Math.round(next * 100) / 100 : undefined;
+            });
+          }}
+          onEdit={item => this.setState({ selectedItem: item, openModal: true })}
+          onAdd={() => this.setState({ openModall: true })}
+        />
+        <div className="nexa-desktop">
       <div className="main">
 
         <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", width: "60vw"}}>
@@ -322,7 +341,8 @@ class Raktarkeszlet extends React.Component {
 
         
          
-      </div>
+      </div></div>
+      </>
     );
   }
 }

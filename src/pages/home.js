@@ -9,6 +9,7 @@ import { signOut, initialize } from "../utils/firebase";
 import Loader from "../components/loader";
 //import logo from '../mylogo.png';
 import emailjs from '@emailjs/browser';
+import MobileHome from '../components/MobileHome';
 
 function handleSignOut() {
   signOut()
@@ -120,226 +121,148 @@ class Home extends React.Component {
     });
   }
 
-  handleSubmitFiz(e) {
-    e.preventDefault();
-    initialize();
-    const itemsRef = Firebase.database().ref(`items/${this.state.userId}/${this.state.id}`);
-    const itemsRefP = Firebase.database().ref(`tetelek/${this.state.userId}`);
-    const itemsRefR = Firebase.database().ref(`rev/${this.state.userId}`);
-    let numbers = this.state.lista;
-    let result = numbers.filter(item => item.vendeg === this.state.cimnev).reduce((total, currentValue) => total = total + currentValue.ar * currentValue.szamlalo,0);  
-    itemsRefR.push({
-      vegosszeg: result
-    })
-    itemsRef.remove()
-    itemsRefP.on('value', (snapshot) => {
-      let items = snapshot.val();
-      for (let item in items) {
-        if(items[item].vendeg === this.state.cimnev){
-          let id = item
-          const delet = Firebase.database().ref(`tetelek/${this.state.userId}/${id}`);
-          delet.remove()
-        }
-      }
-    });
-    this.setState({openModallll: true})
-    window.location.reload(false)
-    /*this.setState({
-      cimnev: '',
-    })*/
-  }
-
-  handleSubmitTetelTorles = (e) => {
-    e.preventDefault();
-    const itemsRef = Firebase.database().ref(`tetelek/${this.state.userId}/${this.state.idt}`);
-    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
-    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
-  
-    itemsRef.once('value', itemSnapshot => {
-      const itemData = itemSnapshot.val();
-      if (!itemData) return;
-  
-      productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
-        const products = productSnapshot.val();
-        if (!products) return;
-  
-        const productId = Object.keys(products)[0];
-        const productData = products[productId];
-        const ingredients = productData.ingredients || {};
-  
-        for (let name in ingredients) {
-          const totalToReturn = ingredients[name] * (itemData.szamlalo || 1);
-          warehouseRef.child(name).once('value').then(snap => {
-            const current = snap.val().quantity;
-            warehouseRef.child(name).update({ quantity: current + totalToReturn });
-          });
-        }
-  
-        itemsRef.remove();
-        this.setState({ openModalll: false });
-      });
-    });
-  };
-  
-
-  
-
-decrementSzamlalo = (itemId) => {
-  const itemRef = Firebase.database().ref(`tetelek/${this.state.userId}/${itemId}`);
-  const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
-  const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
-
-  itemRef.once('value', itemSnapshot => {
-    const itemData = itemSnapshot.val();
-    if (!itemData || (itemData.szamlalo || 0) <= 0) return;
-
-    productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
-      const products = productSnapshot.val();
-      if (!products) return;
-
-      const productId = Object.keys(products)[0];
-      const productData = products[productId];
-      const ingredients = productData.ingredients || {};
-
-      for (let name in ingredients) {
-        warehouseRef.child(name).once('value').then(snap => {
-          const current = snap.val().quantity;
-          warehouseRef.child(name).update({ quantity: current + ingredients[name] });
-        });
-      }
-
-      const newSzamlalo = (itemData.szamlalo || 0) - 1;
-      itemRef.update({ szamlalo: newSzamlalo });
-      this.setState({ szamlalo: newSzamlalo });
-    });
-  });
-};
-
-  
-
-  incrementSzamlalo = (itemId) => {
-    const itemRef = Firebase.database().ref(`tetelek/${this.state.userId}/${itemId}`);
-    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
-    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
-  
-    itemRef.once('value', itemSnapshot => {
-      const itemData = itemSnapshot.val();
-      if (!itemData) return;
-  
-      productsRef.orderByChild('nev').equalTo(itemData.tetel).once('value', productSnapshot => {
-        const products = productSnapshot.val();
-        if (!products) return;
-  
-        const productId = Object.keys(products)[0];
-        const productData = products[productId];
-        const ingredients = productData.ingredients || {};
-  
-        // Ellenőrzés: van-e elég alapanyag
-        const checkPromises = Object.entries(ingredients).map(([name, qty]) => 
-          warehouseRef.child(name).once('value').then(snap => {
-            const available = snap.val()?.quantity ?? 0;
-            if (available < qty) throw new Error(`Nincs elég ${name}`);
-          })
-        );
-  
-        Promise.all(checkPromises)
-          .then(() => {
-            // Ha van elég, frissítjük
-            for (let name in ingredients) {
-              warehouseRef.child(name).once('value').then(snap => {
-                const current = snap.val().quantity;
-                warehouseRef.child(name).update({ quantity: current - ingredients[name] });
-              });
-            }
-  
-            const newSzamlalo = (itemData.szamlalo || 0) + 1;
-            itemRef.update({ szamlalo: newSzamlalo });
-            this.setState({ szamlalo: newSzamlalo });
-          })
-          .catch(err => alert(err.message));
-      });
-    });
-  };
-  
-  
-
-
-  handleSubmitTerm() {
-    initialize();
-    const itemsRef = Firebase.database().ref(`tetelek/${this.state.userId}`);
-    const productsRef = Firebase.database().ref(`sale/${this.state.userId}`);
-    const warehouseRef = Firebase.database().ref(`warehouse/${this.state.userId}`);
-    const { cimnev, tetel, ar, szamlalo } = this.state;
-
-    if(!cimnev) {
-      alert(`Nincs kiválasztott vendég`);
+  handleSubmitFiz = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const { userId, id, cimnev, lista } = this.state;
+    if (!userId || !id || !cimnev) return;
+    const total = lista.filter(line => line.vendeg === cimnev)
+      .reduce((sum, line) => sum + Number(line.ar || 0) * Number(line.szamlalo || 0), 0);
+    if (!Number.isFinite(total) || total < 0) {
+      alert("Érvénytelen rendelési végösszeg.");
       return;
-    };
-  
-    itemsRef.orderByChild('tetel').equalTo(tetel).once('value', snapshot => {
-      const matchingItems = snapshot.val();
-      let existingItem = null;
-      let itemId = null;
-  
-      if (matchingItems) {
-        for (let key in matchingItems) {
-          if (matchingItems[key].vendeg === cimnev) {
-            existingItem = matchingItems[key];
-            itemId = key;
-            break;
-          }
-        }
+    }
+    try {
+      const orderRef = Firebase.database().ref("items/" + userId + "/" + id);
+      const currentOrder = await orderRef.once("value");
+      if (!currentOrder.exists() || currentOrder.val().user !== cimnev) {
+        alert("A vendég már nem szerepel a listában.");
+        return;
       }
-  
-      if (existingItem) {
-        const currentSzamlalo = existingItem.szamlalo || 0;
-        const incrementedSzamlalo = currentSzamlalo + 1;
-  
-        itemsRef.child(itemId).update({ szamlalo: incrementedSzamlalo });
-      } else {
-        const item = {
-          vendeg: cimnev,
-          tetel: tetel,
-          ar: ar,
-          szamlalo: szamlalo,
-        };
-        itemsRef.push(item);
-      }
-  
-      // Update warehouse
-      productsRef.orderByChild('nev').equalTo(tetel).once('value', productSnapshot => {
-        const products = productSnapshot.val();
-        if (products) {
-          const productId = Object.keys(products)[0];
-          const productData = products[productId];
-  
-          if (productData.ingredients) {
-            for (let ingredientName in productData.ingredients) {
-              const requiredQuantity = productData.ingredients[ingredientName];
-              warehouseRef.child(ingredientName).once('value', snapshot => {
-                const data = snapshot.val();
-                if (data) {
-                  const newQuantity = data.quantity - requiredQuantity;
-                  warehouseRef.child(ingredientName).update({ quantity: newQuantity });
-                }
-              });
-            }
-          }
-        }
+      const linesRef = Firebase.database().ref("tetelek/" + userId);
+      const snapshot = await linesRef.once("value");
+      const updates = {};
+      snapshot.forEach(child => {
+        if (child.val().vendeg === cimnev) updates[child.key] = null;
       });
+      // One atomic multi-location write prevents recording revenue without closing the order.
+      const revenueKey = Firebase.database().ref("rev/" + userId).push().key;
+      const atomicUpdates = {
+        ["rev/" + userId + "/" + revenueKey]: { vegosszeg: total },
+        ["items/" + userId + "/" + id]: null
+      };
+      Object.keys(updates).forEach(key => { atomicUpdates["tetelek/" + userId + "/" + key] = null; });
+      await Firebase.database().ref().update(atomicUpdates);
+      this.setState({ cimnev: "", id: "", openModalllll: false });
+    } catch (error) {
+      console.error("Fizetés sikertelen:", error);
+      alert("A fizetés feldolgozása nem sikerült. Ellenőrizd az adatokat!");
+    }
+  };
 
-      this.onCloseModal();
-  
-      // Reset state
-      this.setState({
-        vendeg: '',
-        tetel: '',
-        ar: '',
-        szamlalo: ''
+  // A Firebase transaction prevents parallel mobile clients from overwriting stock.
+  adjustIngredients = async (productName, factor) => {
+    const { userId } = this.state;
+    const productsSnapshot = await Firebase.database().ref("sale/" + userId)
+      .orderByChild("nev").equalTo(productName).once("value");
+    const products = productsSnapshot.val();
+    if (!products) return;
+    const product = products[Object.keys(products)[0]];
+    const ingredients = Object.entries(product.ingredients || {});
+    const adjusted = [];
+    try {
+      for (const [name, amount] of ingredients) {
+        const change = Number(amount) * factor;
+        if (!Number.isFinite(change)) throw new Error("Hibás alapanyag-mennyiség: " + name);
+        const quantityRef = Firebase.database().ref("warehouse/" + userId + "/" + name + "/quantity");
+        const result = await quantityRef.transaction(current => {
+          if (current === null || current === undefined) return undefined;
+          const next = Number(current) + change;
+          if (!Number.isFinite(next) || next < -0.000001) return undefined;
+          return Math.round(Math.max(0, next) * 10000) / 10000;
+        }, undefined, false);
+        if (!result.committed) throw new Error("Nincs elegendő készlet: " + name);
+        adjusted.push([quantityRef, change]);
+      }
+    } catch (error) {
+      // Best-effort rollback of previously changed ingredients.
+      for (const [ref, change] of adjusted.reverse()) {
+        await ref.transaction(current => current === null ? undefined :
+          Math.round((Number(current) - change) * 10000) / 10000);
+      }
+      throw error;
+    }
+  };
+
+  handleSubmitTetelTorles = async e => {
+    if (e && e.preventDefault) e.preventDefault();
+    const itemRef = Firebase.database().ref("tetelek/" + this.state.userId + "/" + this.state.idt);
+    try {
+      const snapshot = await itemRef.once("value");
+      const item = snapshot.val();
+      if (!item) return;
+      await this.adjustIngredients(item.tetel, Number(item.szamlalo) || 0);
+      await itemRef.remove();
+      this.setState({ openModalll: false });
+    } catch (error) {
+      alert(error.message || "A tétel törlése sikertelen.");
+    }
+  };
+
+  decrementSzamlalo = async itemId => {
+    const ref = Firebase.database().ref("tetelek/" + this.state.userId + "/" + itemId);
+    try {
+      const snapshot = await ref.once("value");
+      const item = snapshot.val();
+      if (!item || Number(item.szamlalo) <= 0) return;
+      await this.adjustIngredients(item.tetel, 1);
+      if (Number(item.szamlalo) === 1) await ref.remove();
+      else await ref.transaction(current => current && Number(current.szamlalo) > 0 ?
+        { ...current, szamlalo: Number(current.szamlalo) - 1 } : undefined);
+    } catch (error) {
+      alert(error.message || "Nem sikerült csökkenteni a mennyiséget.");
+    }
+  };
+
+  incrementSzamlalo = async itemId => {
+    const ref = Firebase.database().ref("tetelek/" + this.state.userId + "/" + itemId);
+    try {
+      const snapshot = await ref.once("value");
+      const item = snapshot.val();
+      if (!item) return;
+      await this.adjustIngredients(item.tetel, -1);
+      await ref.transaction(current => current ?
+        { ...current, szamlalo: Number(current.szamlalo || 0) + 1 } : undefined);
+    } catch (error) {
+      alert(error.message || "Nincs elegendő készlet.");
+    }
+  };
+
+  handleSubmitTerm = async () => {
+    const { userId, cimnev, tetel, ar } = this.state;
+    if (!userId || !cimnev || !tetel || !Number.isFinite(Number(ar)) || Number(ar) < 0) {
+      alert("Válassz vendéget és érvényes terméket!");
+      return;
+    }
+    const ref = Firebase.database().ref("tetelek/" + userId);
+    try {
+      const snapshot = await ref.orderByChild("tetel").equalTo(tetel).once("value");
+      let existingId = null;
+      snapshot.forEach(child => {
+        if (child.val().vendeg === cimnev) existingId = child.key;
       });
-    });
-  }
-  
+      await this.adjustIngredients(tetel, -1);
+      if (existingId) {
+        await ref.child(existingId).transaction(current => current ?
+          { ...current, szamlalo: Number(current.szamlalo || 0) + 1 } : undefined);
+      } else {
+        await ref.push({ vendeg: cimnev, tetel, ar: Number(ar), szamlalo: 1 });
+      }
+      this.onCloseModal();
+      this.setState({ tetel: "", ar: "", szamlalo: 1 });
+    } catch (error) {
+      alert(error.message || "Nem sikerült hozzáadni a terméket.");
+    }
+  };
 
 toggleFullScreen() {
   let elem = document.documentElement;
@@ -403,101 +326,47 @@ onCloseMmodallll = ()=>{
 
 componentDidMount() {
   initialize();
-  console.log("lefut a componentdidmount");
-  Firebase.auth().onAuthStateChanged((user) => {
-    this.setState({
-      dolgozo: user.email,
-      userId: user.uid
-    });
-    /*if (user.email === 'kalolevente@gmail.com' || user.email === 'lalivaroskut@gmail.com') {
-      this.setState({ isVisible: true });
-    } else {
-      this.setState({ isVisible: false });
-    }*/
-    const categoriesRef = Firebase.database().ref(`categories/${user.uid}`);
-    categoriesRef.on('value', (snapshot) => {
-    const categoryList = snapshot.val() || {};
-    const categories = Object.values(categoryList);
-    this.setState({ customCategories: categories });
-    const itemsRef = Firebase.database().ref(`items/${this.state.userId}`);
-  const itemsRefT = Firebase.database().ref(`sale/${this.state.userId}`);
-  const itemsRefR = Firebase.database().ref(`rev/${this.state.userId}`);
-  const itemsRefP = Firebase.database().ref(`tetelek/${this.state.userId}`);
-  itemsRefR.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let ossz = [];
-      for (let item in items) {
-        ossz.push({
-          ossz: items[item].vegosszeg
-        });
-      }
-    
-    this.setState({bevtl: ossz});
+  this.dbListeners = [];
+  this.unsubscribeAuth = Firebase.auth().onAuthStateChanged(user => {
+    for (const [ref, callback] of this.dbListeners) ref.off("value", callback);
+    this.dbListeners = [];
+    if (!user) return;
+    const uid = user.uid;
+    this.setState({ dolgozo: user.email || "", userId: uid });
+    const observe = (path, onValue) => {
+      const ref = Firebase.database().ref(path + "/" + uid);
+      const callback = snapshot => onValue(snapshot.val() || {});
+      ref.on("value", callback);
+      this.dbListeners.push([ref, callback]);
+    };
+    observe("categories", entries => this.setState({ customCategories: Object.values(entries) }));
+    observe("items", entries => this.setState({
+      items: Object.entries(entries).map(([id, value]) => ({ id, user: value.user }))
+    }));
+    observe("sale", entries => this.setState({
+      termekek: Object.entries(entries).map(([id, value]) => ({
+        id, cat: value.cat, ar: value.ar, nev: value.nev,
+        ingredients: Object.entries(value.ingredients || {}).map(([name, quantity]) => ({ name, quantity }))
+      }))
+    }));
+    observe("rev", entries => this.setState({
+      bevtl: Object.values(entries).map(value => ({ ossz: Number(value.vegosszeg) || 0 }))
+    }));
+    observe("tetelek", entries => this.setState({
+      lista: Object.entries(entries).map(([id, value]) => ({
+        id, ar: value.ar, tetel: value.tetel, vendeg: value.vendeg,
+        szamlalo: value.szamlalo
+      }))
+    }));
   });
-  itemsRef.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      newState.push({
-        id: item,
-        user: items[item].user
-      });
-    }
-    this.setState({
-      items: newState
-    });
-  });
-  itemsRefT.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      let currentItem = items[item];
-      newState.push({
-        id: item,
-        cat: items[item].cat,
-        ar: items[item].ar,
-        nev: items[item].nev,
-        ingredients: currentItem.ingredients ? Object.entries(currentItem.ingredients).map(([ingName, quantity]) => ({
-          name: ingName,
-          quantity: quantity
-      })) : []
-      });
-    }
-    this.setState({
-      termekek: newState
-    });
-  });
-
-  itemsRefP.on('value', (snapshot) => {
-    let items = snapshot.val();
-    let newState = [];
-    for (let item in items) {
-      newState.push({
-        id: item,
-        ar: items[item].ar,
-        tetel: items[item].tetel,
-        vendeg: items[item].vendeg,
-        szamlalo: items[item].szamlalo,
-      });
-      this.setState({
-        lista: newState
-      });
-    }
-  });
-  });
-  });
-  
-
-  this.timer = setInterval(() => {
-    this.setState({ currentDate: new Date() });
-  }, 1000);
+  this.timer = setInterval(() => this.setState({ currentDate: new Date() }), 1000);
 }
 
 componentWillUnmount() {
-  // Időzítő törlése, amikor a komponens eltávolításra kerül
   clearInterval(this.timer);
+  if (this.unsubscribeAuth) this.unsubscribeAuth();
+  for (const [ref, callback] of (this.dbListeners || [])) ref.off("value", callback);
 }
-
 
   render() {
     if (this.props.authState === authStates.INITIAL_VALUE) {
@@ -508,14 +377,35 @@ componentWillUnmount() {
       return <Redirect to="/login"></Redirect>;
     }
     let numbers = this.state.lista;
-    let result = numbers.filter(item => item.vendeg === this.state.cimnev).reduce((total, currentValue) => total = total + currentValue.ar * currentValue.szamlalo,0);           
+    let result = numbers.filter(item => item.vendeg === this.state.cimnev).reduce((total, currentValue) => total + Number(currentValue.ar || 0) * Number(currentValue.szamlalo || 0),0);           
     let bevtl = this.state.bevtl;
-    let resultt = bevtl.reduce((total, currentValue) => total + currentValue.ossz,0);
+    let resultt = bevtl.reduce((total, currentValue) => total + Number(currentValue.ossz || 0),0);
 
     const { currentDate } = this.state;
   
     return (
-      <div className="container">
+      <>
+      <MobileHome
+        guests={this.state.items}
+        products={this.state.termekek}
+        lines={this.state.lista}
+        categories={this.state.customCategories}
+        selectedGuest={this.state.cimnev}
+        employee={this.state.dolgozo}
+        revenue={resultt}
+        selectGuest={guest => this.setState({ cimnev: guest.user, id: guest.id })}
+        createGuest={name => {
+          const guestRef = Firebase.database().ref("items/" + this.state.userId).push();
+          guestRef.set({ user: name });
+          this.setState({ cimnev: name, id: guestRef.key });
+        }}
+        addProduct={product => this.setState({ szamlalo: 1, ar: product.ar, tetel: product.nev }, () => this.handleSubmitTerm())}
+        onIncrement={this.incrementSzamlalo}
+        onDecrement={this.decrementSzamlalo}
+        onDelete={id => this.setState({ idt: id }, () => this.handleSubmitTetelTorles({ preventDefault() {} }))}
+        onPay={() => this.handleSubmitFiz({ preventDefault() {} })}
+      />
+      <div className="nexa-desktop"><div className="container">
         <div className="grid">
           <div className="innergrid">
             <div className="grid-item lt-radius innergrid-full-button mobilonnemkell">
@@ -675,7 +565,8 @@ componentWillUnmount() {
             </div>
           </div>  
         </div>
-      </div>
+      </div></div>
+      </>
     );
   }
    
